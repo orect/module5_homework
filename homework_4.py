@@ -1,5 +1,6 @@
 def input_error(func):
-    def inner(*args, **kwargs):
+
+    def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except ValueError:
@@ -7,84 +8,71 @@ def input_error(func):
         except KeyError:
             return "Contact not found."
         except IndexError:
-            return "Enter the argument for the command"
-    return inner
+            return "Enter the argument for the command."
+    return wrapper
 
-@input_error
-def add_contact(args, contacts):
-    if len(args) != 2:
-        raise IndexError
-    name, phone = args
-    contacts[name] = phone
-    return "Contact added."
-
-@input_error
-def change_contact(args, contacts):
-    if len(args) != 2:
-        raise IndexError
-    name, new_phone = args
-    if name not in contacts:
-        raise KeyError
-    contacts[name] = new_phone
-    return "Contact updated."
-
-@input_error
-def show_phone(args, contacts):
-    if len(args) != 1:
-        raise IndexError
-    name = args[0]
+def get_contact(name, contacts):
+    
     if name not in contacts:
         raise KeyError
     return contacts[name]
 
 @input_error
+def add_contact(args, contacts):
+    name, phone = args  
+    contacts[name] = phone
+    return "Contact added."
+
+@input_error
+def change_contact(args, contacts):
+    name, new_phone = args
+    get_contact(name, contacts)  
+    contacts[name] = new_phone
+    return "Contact updated."
+
+@input_error
+def show_phone(args, contacts):
+    (name,) = args  
+    return get_contact(name, contacts)
+
+@input_error
 def show_all(contacts):
     if not contacts:
         return "No contacts found."
-    result = []
-    for name, phone in contacts.items():
-        result.append(f"{name}: {phone}")
-    return "\n".join(result)
+    return "\n".join(f"{name}: {phone}" for name, phone in contacts.items())
 
 def parse_input(user_input):
     parts = user_input.strip().split()
     if not parts:
         return "", []
-    cmd = parts[0].lower()
-    args = parts[1:]
-    return cmd, args
+    command = parts[0].lower()
+    arguments = parts[1:]
+    return command, arguments
 
 def main():
     contacts = {}
     print("Welcome to the assistant bot!")
 
+    commands = {
+        "add": lambda args: add_contact(args, contacts),
+        "change": lambda args: change_contact(args, contacts),
+        "phone": lambda args: show_phone(args, contacts),
+        "all": lambda args: show_all(contacts),
+    }
+
     while True:
         user_input = input("Enter a command: ")
-        command, args = parse_input(user_input)
+        command, arguments = parse_input(user_input)
 
         if command in ["exit", "close"]:
             print("Good bye!")
             break
-
         elif command == "hello":
             print("How can I help you?")
-
-        elif command == "add":
-            print(add_contact(args, contacts))
-
-        elif command == "change":
-            print(change_contact(args, contacts))
-
-        elif command == "phone":
-            print(show_phone(args, contacts))
-
-        elif command == "all":
-            print(show_all(contacts))
-
+        elif command in commands:
+            print(commands[command](arguments))
         elif command == "":
-            # Якщо користувач просто натискає Enter без команди
             print("Invalid command.")
-
         else:
             print("Invalid command.")
 
